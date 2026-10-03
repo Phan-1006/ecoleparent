@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4338ca" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#grad)" />
+  <g fill="none" stroke="#ffffff" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" transform="translate(96, 96)">
+    <!-- Graduation Cap & School Shield Icon -->
+    <path d="M160 32 L300 100 L160 168 L20 100 Z" fill="#ffffff" fill-opacity="0.15" />
+    <path d="M60 120 V200 C60 260 160 300 160 300 C160 300 260 260 260 200 V120" />
+    <path d="M160 180 V280" />
+    <path d="M110 230 L160 260 L210 230" />
+  </g>
+</svg>

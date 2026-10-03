@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "School": {
+      "title": "School",
+      "description": "Educational institution created by superadmin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 200 },
+        "adminEmail": { "type": "string", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 300 },
+        "currency": { "type": "string", "maxLength": 10 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "name", "adminEmail"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Student registered by class teacher or school director with auto-generated ID",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "matricule": { "type": "string", "maxLength": 64 },
+        "schoolId": { "type": "string", "maxLength": 128 },
+        "classId": { "type": "string", "maxLength": 128 },
+        "className": { "type": "string", "maxLength": 100 },
+        "firstName": { "type": "string", "maxLength": 100 },
+        "lastName": { "type": "string", "maxLength": 100 },
+        "parentName": { "type": "string", "maxLength": 150 },
+        "parentPhone": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["id", "matricule", "schoolId", "classId", "firstName", "lastName"]
+    },
+    "ParentLink": {
+      "title": "ParentLink",
+      "description": "Association between a parent Google user and a student ID",
+      "type": "object",
+      "properties": {
+        "parentEmail": { "type": "string", "maxLength": 200 },
+        "studentId": { "type": "string", "maxLength": 128 },
+        "matricule": { "type": "string", "maxLength": 64 },
+        "linkedAt": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["parentEmail", "studentId", "matricule"]
+    }
+  },
+  "firestore": {
+    "/schools/{schoolId}": {
+      "schema": "School",
+      "description": "Schools directory"
+    },
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Students with their generated ID"
+    },
+    "/parent_links/{linkId}": {
+      "schema": "ParentLink",
+      "description": "Parent to student associations"
+    }
+  }
+}
