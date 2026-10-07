@@ -7,6 +7,8 @@ import { googleSignInAvailable, isNative, nativeGoogleIdToken, setStatusBarOnDar
 
 type Mode = 'signin' | 'signup' | 'reset';
 
+const PRIVACY_URL = `${import.meta.env.VITE_PARENT_URL || 'https://parentecole.web.app'}/confidentialite.html`;
+
 export function Login() {
   const { signIn, signUp, resetPassword, signInWithGoogle, signInWithGoogleIdToken } = useAuth();
   const [mode, setMode] = useState<Mode>('signin');
@@ -171,6 +173,9 @@ export function Login() {
               Retour à la connexion
             </button>
           )}
+          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="pt-2 text-center text-[13px] text-ink-3 underline">
+            Politique de confidentialité
+          </a>
         </form>
       </div>
     </div>

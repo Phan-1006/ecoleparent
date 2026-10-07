@@ -139,6 +139,14 @@ export function Login() {
             '.'
           )}
         </p>
+        <a
+          href={`${import.meta.env.VITE_PARENT_URL || 'https://parentecole.web.app'}/confidentialite.html`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-center text-[13px] text-ink-3 underline"
+        >
+          Politique de confidentialité
+        </a>
       </div>
     </Frame>
   );
