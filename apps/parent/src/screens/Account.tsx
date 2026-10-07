@@ -7,7 +7,7 @@ import { useState } from 'react';
 import type { Nav } from '../App';
 import { Avatar } from '../components/ChildPicker';
 import { useParentData, type Child } from '../data';
-import { shareText } from '../native';
+import { nativeGoogleSignOut, shareText } from '../native';
 
 export function Account({ nav }: { nav: Nav }) {
   const { user, signOut } = useAuth();
@@ -89,7 +89,14 @@ export function Account({ nav }: { nav: Nav }) {
           </p>
         </section>
 
-        <Button variant="danger" icon={<LogOut size={18} aria-hidden="true" />} onClick={() => void signOut()}>
+        <Button
+          variant="danger"
+          icon={<LogOut size={18} aria-hidden="true" />}
+          onClick={async () => {
+            await nativeGoogleSignOut();
+            await signOut();
+          }}
+        >
           Se déconnecter
         </Button>
         <p className="text-center text-xs text-ink-3">ParentEcole · version {__APP_VERSION__}</p>

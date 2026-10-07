@@ -9,4 +9,5 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID?: string;
   readonly VITE_USE_EMULATORS?: string;
   readonly VITE_ECOLE_URL?: string;
+  readonly VITE_GOOGLE_WEB_CLIENT_ID?: string;
 }

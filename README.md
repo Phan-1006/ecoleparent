@@ -10,7 +10,7 @@ Suivi scolaire entre l'école et les parents.
 
 | Profil | Où | Ce qu'il fait |
 | --- | --- | --- |
-| Parent | App Android | Lie ses enfants (code élève + son téléphone), suit présences, frais, devoirs, conduite ; justifie une absence ; marque un devoir « vu » ; partage un reçu |
+| Parent | App Android (connexion Google ou e-mail) | Lie ses enfants (code élève + son téléphone), suit présences, frais, devoirs, conduite ; justifie une absence ; marque un devoir « vu » ; partage un reçu |
 | Direction | Site école | Classes, élèves (fiche d'accès avec QR code), personnel, grille des frais et tranches, communiqués, agenda, tableau de bord |
 | Surveillant | Site école (aussi sur téléphone) | Appel express (on coche seulement les absents et retards), justifications, conduite |
 | Professeur | Site école | Appel et devoirs de ses classes, conduite |
@@ -59,11 +59,18 @@ Premier parcours :
 
 L'APK est construit par GitHub Actions : rien à installer sur l'ordinateur.
 
-1. Sur GitHub, ouvrez **Settings › Secrets and variables › Actions › Variables** et ajoutez `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, et facultativement `VITE_ECOLE_URL`.
+1. Sur GitHub, ouvrez **Settings › Secrets and variables › Actions › Variables** et ajoutez `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_GOOGLE_WEB_CLIENT_ID`, et facultativement `VITE_ECOLE_URL`.
 2. Dans l'onglet **Actions**, lancez **APK Android (parents)** (bouton *Run workflow*). L'APK est téléchargeable dans les *Artifacts* du build.
 3. Un tag `v1.0.0` poussé sur GitHub publie l'APK dans une *Release*, avec un lien public à envoyer aux parents.
 
-Sans clé de signature, l'APK est signé en mode « debug ». Il s'installe sur les téléphones, mais pas sur le Play Store. Pour une version signée, ajoutez les secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` et `ANDROID_KEY_PASSWORD`.
+**Connexion Google dans l'APK.** Elle exige que l'APK soit toujours signé avec la **même clé** (son empreinte SHA-1 est déclarée chez Google) :
+
+1. Clé de signature : fichier `.jks` gardé hors du dépôt, avec ses mots de passe. **Sauvegardez-la** (clé USB, Drive) : sans elle, impossible de publier une mise à jour de l'app.
+2. Console Firebase › Paramètres du projet › Vos applications › **Ajouter une application Android** : identifiant `cd.parentecole.app`, puis ajoutez les empreintes **SHA-1 et SHA-256** de la clé (`keytool -list -v -keystore <fichier>.jks`).
+3. Authentication › Méthode de connexion › Google › **Configuration du SDK Web** : copiez l'**ID client Web** dans la variable GitHub `VITE_GOOGLE_WEB_CLIENT_ID`.
+4. Secrets GitHub : `ANDROID_KEYSTORE_BASE64` (`base64 -w0 <fichier>.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
+
+Sans clé de signature, l'APK est signé en mode « debug » et la connexion Google n'y fonctionne pas. Il s'installe sur les téléphones, mais pas sur le Play Store.
 
 Pour construire en local (Android Studio ou SDK installé) : `npm run android:sync`, puis ouvrez `apps/parent/android`.
 

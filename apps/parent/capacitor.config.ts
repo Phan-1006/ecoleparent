@@ -12,6 +12,11 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
   },
   plugins: {
+    // Connexion Google native (Credential Manager). Les autres fournisseurs ne sont pas embarqués.
+    SocialLogin: {
+      providers: { google: true, facebook: false, apple: false, twitter: false },
+      logLevel: 1,
+    },
     StatusBar: {
       backgroundColor: '#f4f5f0',
       style: 'LIGHT',

@@ -6,6 +6,7 @@ import { Button, ErrorNote, Field, IconButton, useToast } from '@pe/shared/ui';
 import { ArrowLeft, LogOut, QrCode } from 'lucide-react';
 import { useCallback, useState, type FormEvent } from 'react';
 import { matriculeFromQr, QrScanner } from '../components/QrScanner';
+import { nativeGoogleSignOut } from '../native';
 import { useParentData } from '../data';
 
 export function AddChild({ first, onDone, onCancel }: { first?: boolean; onDone: () => void; onCancel?: () => void }) {
@@ -60,7 +61,7 @@ export function AddChild({ first, onDone, onCancel }: { first?: boolean; onDone:
           <span />
         )}
         {first && (
-          <Button variant="ghost" size="sm" icon={<LogOut size={16} aria-hidden="true" />} onClick={() => void signOut()}>
+          <Button variant="ghost" size="sm" icon={<LogOut size={16} aria-hidden="true" />} onClick={() => void nativeGoogleSignOut().then(signOut)}>
             Déconnexion
           </Button>
         )}

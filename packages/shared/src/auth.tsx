@@ -5,6 +5,7 @@ import {
   onIdTokenChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut as fbSignOut,
@@ -20,6 +21,8 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  /** Connexion avec un jeton d'identité Google obtenu par le SDK natif (APK Android). */
+  signInWithGoogleIdToken: (idToken: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   sendVerification: () => Promise<void>;
   /** Recharge le compte (après vérification de l'e-mail) et rafraîchit le jeton. */
@@ -63,6 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithPopup(auth, provider, browserPopupRedirectResolver);
   }, [auth]);
 
+  const signInWithGoogleIdToken = useCallback(async (idToken: string) => {
+    await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+  }, [auth]);
+
   const resetPassword = useCallback(async (email: string) => {
     await sendPasswordResetEmail(auth, email.trim());
   }, [auth]);
@@ -84,8 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [auth]);
 
   const value = useMemo(
-    () => ({ user, loading, signIn, signUp, signInWithGoogle, resetPassword, sendVerification, refresh, signOut }),
-    [user, loading, signIn, signUp, signInWithGoogle, resetPassword, sendVerification, refresh, signOut],
+    () => ({ user, loading, signIn, signUp, signInWithGoogle, signInWithGoogleIdToken, resetPassword, sendVerification, refresh, signOut }),
+    [user, loading, signIn, signUp, signInWithGoogle, signInWithGoogleIdToken, resetPassword, sendVerification, refresh, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

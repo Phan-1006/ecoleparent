@@ -51,6 +51,40 @@ export async function setStatusBarOnDark(dark: boolean) {
   await StatusBar.setBackgroundColor({ color: dark ? '#1e4a38' : '#f4f5f0' }).catch(() => undefined);
 }
 
+/** Identifiant OAuth « Web » du projet (Authentication › Google › Configuration du SDK Web). */
+const GOOGLE_WEB_CLIENT_ID = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID;
+
+/** Connexion Google disponible : toujours sur le web, sur Android si l'identifiant est configuré. */
+export const googleSignInAvailable = !isNative || Boolean(GOOGLE_WEB_CLIENT_ID);
+
+let socialReady: Promise<void> | null = null;
+
+/**
+ * Connexion Google native (Credential Manager d'Android) : renvoie un jeton d'identité
+ * que Firebase Auth accepte. Renvoie null si la personne a annulé.
+ */
+export async function nativeGoogleIdToken(): Promise<string | null> {
+  const { SocialLogin } = await import('@capgo/capacitor-social-login');
+  socialReady ??= SocialLogin.initialize({ google: { webClientId: GOOGLE_WEB_CLIENT_ID, mode: 'online' } });
+  await socialReady;
+  try {
+    const res = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+    const result = res.result as { idToken?: string | null };
+    if (!result.idToken) throw new Error('Google n’a pas renvoyé de jeton. Réessayez.');
+    return result.idToken;
+  } catch (e) {
+    if (/cancel|annul/i.test(String((e as Error)?.message ?? e))) return null;
+    throw e;
+  }
+}
+
+/** Oublie le compte Google choisi, pour pouvoir en prendre un autre à la prochaine connexion. */
+export async function nativeGoogleSignOut() {
+  if (!isNative || !GOOGLE_WEB_CLIENT_ID) return;
+  const { SocialLogin } = await import('@capgo/capacitor-social-login');
+  await SocialLogin.logout({ provider: 'google' }).catch(() => undefined);
+}
+
 /**
  * Notifications push (Firebase Cloud Messaging). Désactivées tant que
  * VITE_PUSH_ENABLED n'est pas « true » : elles exigent google-services.json dans l'APK.

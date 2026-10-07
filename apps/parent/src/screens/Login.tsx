@@ -3,12 +3,12 @@ import { useAuth } from '@pe/shared/auth';
 import { Button, ErrorNote, Field, Segmented } from '@pe/shared/ui';
 import { BookOpen, CalendarCheck, School, Wallet } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { isNative, setStatusBarOnDark } from '../native';
+import { googleSignInAvailable, isNative, nativeGoogleIdToken, setStatusBarOnDark } from '../native';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
 export function Login() {
-  const { signIn, signUp, resetPassword, signInWithGoogle } = useAuth();
+  const { signIn, signUp, resetPassword, signInWithGoogle, signInWithGoogleIdToken } = useAuth();
   const [mode, setMode] = useState<Mode>('signin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,12 +44,22 @@ export function Login() {
     }
   }
 
+  const [googleBusy, setGoogleBusy] = useState(false);
+
   async function google() {
     setError(null);
+    setGoogleBusy(true);
     try {
-      await signInWithGoogle();
+      if (isNative) {
+        const idToken = await nativeGoogleIdToken();
+        if (idToken) await signInWithGoogleIdToken(idToken);
+      } else {
+        await signInWithGoogle();
+      }
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      setGoogleBusy(false);
     }
   }
 
@@ -83,6 +93,26 @@ export function Login() {
 
       <div className="safe-bottom -mt-6 min-h-[55%] rounded-t-[28px] bg-surface px-6 pt-6 pb-8">
         <form onSubmit={submit} className="mx-auto flex max-w-md flex-col gap-4">
+          {googleSignInAvailable && mode !== 'reset' && (
+            <>
+              <Button
+                variant="secondary"
+                size="lg"
+                block
+                loading={googleBusy}
+                onClick={() => void google()}
+                className="border-[#c4ccc6] text-ink"
+                icon={<GoogleMark />}
+              >
+                Continuer avec Google
+              </Button>
+              <div className="flex items-center gap-3 text-[13px] text-ink-3">
+                <span className="h-px flex-1 bg-line" />
+                ou avec une adresse e-mail
+                <span className="h-px flex-1 bg-line" />
+              </div>
+            </>
+          )}
           {mode !== 'reset' ? (
             <Segmented
               label="Connexion ou inscription"
@@ -144,18 +174,6 @@ export function Login() {
             </button>
           )}
 
-          {!isNative && mode !== 'reset' && (
-            <>
-              <div className="flex items-center gap-3 text-[13px] text-ink-3">
-                <span className="h-px flex-1 bg-line" />
-                ou
-                <span className="h-px flex-1 bg-line" />
-              </div>
-              <Button variant="secondary" size="lg" block onClick={google} className="border-[#c4ccc6] text-ink" icon={<GoogleMark />}>
-                Continuer avec Google
-              </Button>
-            </>
-          )}
 
           <p className="pt-2 text-center text-[13px] leading-relaxed text-ink-3">
             Directeur, enseignant ou caissier ? Connectez-vous sur le site de l'école
