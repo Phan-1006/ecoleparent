@@ -28,6 +28,8 @@ interface AuthState {
   secondFactor: string | null;
   /** La connexion attend le code à 6 chiffres de l'application d'authentification. */
   mfaPending: boolean;
+  /** Une application d'authentification est inscrite sur le compte. */
+  totpEnrolled: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -51,8 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [secondFactor, setSecondFactor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
-  // Change à chaque rafraîchissement pour que les écrans relisent `user`.
-  const [, setVersion] = useState(0);
+  // Change à chaque événement de jeton : l'objet `user` reste le même alors que ses facteurs
+  // inscrits changent, il faut donc forcer les écrans à le relire.
+  const [version, setVersion] = useState(0);
 
   useEffect(
     () =>
@@ -131,7 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth.currentUser) return;
     await auth.currentUser.reload();
     await auth.currentUser.getIdToken(true);
+    const result = await auth.currentUser.getIdTokenResult();
     setUser(auth.currentUser);
+    setSecondFactor(result.signInSecondFactor ?? null);
     setVersion((v) => v + 1);
   }, [auth]);
 
@@ -147,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       secondFactor,
       mfaPending,
+      totpEnrolled: hasTotp(user),
       signIn,
       signUp,
       signInWithGoogle,
@@ -158,7 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       signOut,
     }),
-    [user, loading, secondFactor, mfaPending, signIn, signUp, signInWithGoogle, signInWithGoogleIdToken, completeMfa, cancelMfa, resetPassword, sendVerification, refresh, signOut],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user, version, loading, secondFactor, mfaPending, signIn, signUp, signInWithGoogle, signInWithGoogleIdToken, completeMfa, cancelMfa, resetPassword, sendVerification, refresh, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

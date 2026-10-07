@@ -1,4 +1,4 @@
-import { AuthProvider, hasTotp, useAuth } from '@pe/shared/auth';
+import { AuthProvider, useAuth } from '@pe/shared/auth';
 import { MfaChallenge } from '@pe/shared/mfa';
 import { isFirebaseConfigured } from '@pe/shared/firebase';
 import { Loading, ToastProvider } from '@pe/shared/ui';
@@ -32,7 +32,7 @@ function Gate() {
 
 function Authorized() {
   const state = useAccessState();
-  const { user, secondFactor } = useAuth();
+  const { secondFactor, totpEnrolled } = useAuth();
   // Un super-administrateur choisit l'école qu'il veut ouvrir.
   const [openSchool, setOpenSchool] = useState<string | null>(null);
 
@@ -41,8 +41,8 @@ function Authorized() {
 
   // Personnel et super-administrateurs : code d'une application d'authentification obligatoire
   // (les règles Firestore refusent tout accès sans lui).
-  if (!hasTotp(user)) return <EnrollMfa />;
-  if (!secondFactor) return <MfaRelogin />;
+  // Une session ouverte avec le code suffit (la liste des facteurs inscrits arrive parfois après).
+  if (!secondFactor) return totpEnrolled ? <MfaRelogin /> : <EnrollMfa />;
 
   const { access } = state;
   const schoolId = access.isSuper ? openSchool : access.member!.schoolId;

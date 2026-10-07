@@ -233,7 +233,7 @@ function GoogleMark() {
 
 /** Première connexion du personnel : inscription obligatoire d'une application d'authentification. */
 export function EnrollMfa() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, refresh } = useAuth();
   const [setup, setSetup] = useState<{ secret: TotpSecret; qrUrl: string } | null>(null);
   const [qr, setQr] = useState('');
   const [code, setCode] = useState('');
@@ -267,7 +267,13 @@ export function EnrollMfa() {
     setError(null);
     try {
       await finishTotpEnrollment(user, setup.secret, code);
+      await refresh();
     } catch (err) {
+      if ((err as { code?: string }).code === 'auth/mfa-enrollment-already-complete') {
+        // Déjà inscrit (par exemple double validation) : c'est une réussite.
+        await refresh().catch(() => undefined);
+        return;
+      }
       setError(errorMessage(err));
       setCode('');
     } finally {
