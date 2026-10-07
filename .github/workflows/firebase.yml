@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Configuration absente
         if: env.FIREBASE_SERVICE_ACCOUNT == ''
-        run: echo "Secret FIREBASE_SERVICE_ACCOUNT absent : déploiement ignoré (voir README)."
+        run: echo 'Secret FIREBASE_SERVICE_ACCOUNT absent, déploiement ignoré (voir README).'
       - uses: actions/checkout@v4
         if: env.FIREBASE_SERVICE_ACCOUNT != ''
       - uses: actions/setup-node@v4
