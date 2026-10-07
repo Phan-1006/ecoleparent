@@ -51,6 +51,8 @@ export interface FeedItem {
 
 interface ParentData {
   loading: boolean;
+  /** Impossible de lire la liste des enfants (accès refusé, réseau). */
+  error: Error | null;
   links: ParentLink[];
   children: Child[];
   active: Child | null;
@@ -181,7 +183,7 @@ export function ParentDataProvider({ children: content }: { children: ReactNode 
 
   const loading = linksLive.loading || (links.length > 0 && childList.length === 0 && perChild.loading);
 
-  const value: ParentData = { loading, links, children: childList, active, setActiveId, feed, unread, seenAt, markFeedRead };
+  const value: ParentData = { loading, error: linksLive.error, links, children: childList, active, setActiveId, feed, unread, seenAt, markFeedRead };
   return <Ctx.Provider value={value}>{content}</Ctx.Provider>;
 }
 

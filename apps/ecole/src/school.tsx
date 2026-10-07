@@ -17,6 +17,8 @@ export interface SchoolData {
   /** Paiements de l'école (direction et caisse seulement). */
   payments: Payment[];
   loading: boolean;
+  /** Erreur de lecture (accès refusé, réseau) sur les données de base. */
+  error: Error | null;
   classById: Map<string, ClassRoom>;
   studentById: Map<string, Student>;
   /** Classes que l'utilisateur peut gérer (appel, devoirs) : toutes, ou celles d'un professeur. */
@@ -56,6 +58,7 @@ export function SchoolDataProvider({ schoolId, children }: { schoolId: string; c
       members: [...members.data].sort(byName),
       payments: payments.data,
       loading: school.loading || classes.loading || students.loading || fees.loading,
+      error: school.error ?? classes.error ?? students.error ?? fees.error,
       classById: new Map(cls.map((c) => [c.id, c])),
       studentById: new Map(studs.map((s) => [s.id, s])),
       myClasses: mine,

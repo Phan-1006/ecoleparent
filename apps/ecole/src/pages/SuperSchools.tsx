@@ -3,7 +3,7 @@ import { createSchool, q, setSchoolActive } from '@pe/shared/api';
 import { useAuth } from '@pe/shared/auth';
 import { getFirebase } from '@pe/shared/firebase';
 import { useLiveQuery } from '@pe/shared/hooks';
-import { Badge, Button, Card, Empty, Field, Loading, Modal, SelectField } from '@pe/shared/ui';
+import { Badge, Button, Card, Empty, ErrorNote, Field, Loading, Modal, SelectField } from '@pe/shared/ui';
 import { ChevronRight, LogOut, Plus, School as SchoolIcon } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { PageHeader, useAction } from '../components/common';
@@ -35,6 +35,8 @@ export function SuperSchools({ onOpen }: { onOpen: (id: string) => void }) {
       />
       {schools.loading ? (
         <Loading />
+      ) : schools.error ? (
+        <AccessError onSignOut={() => void signOut()} />
       ) : list.length === 0 ? (
         <Empty icon={<SchoolIcon size={22} />} title="Aucune école" action={<Button onClick={() => setCreating(true)}>Créer la première école</Button>}>
           Commencez par créer une école et désigner son directeur.
@@ -126,5 +128,25 @@ function CreateSchool({ open, onClose }: { open: boolean; onClose: () => void })
         </div>
       </form>
     </Modal>
+  );
+}
+
+/** Lecture refusée ou impossible : on le dit, au lieu d'afficher une liste vide. */
+export function AccessError({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <ErrorNote>
+        Impossible de charger les données : l'accès a été refusé ou la connexion a échoué. Rechargez la page ; si le problème continue,
+        déconnectez-vous puis reconnectez-vous avec votre code de vérification.
+      </ErrorNote>
+      <div className="flex gap-2">
+        <Button variant="secondary" onClick={() => window.location.reload()}>
+          Recharger
+        </Button>
+        <Button variant="ghost" onClick={onSignOut}>
+          Se déconnecter
+        </Button>
+      </div>
+    </div>
   );
 }

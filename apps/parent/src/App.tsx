@@ -2,7 +2,7 @@ import { addFcmToken, saveUserProfile } from '@pe/shared/api';
 import { AuthProvider, useAuth } from '@pe/shared/auth';
 import { MfaChallenge } from '@pe/shared/mfa';
 import { getFirebase, isFirebaseConfigured } from '@pe/shared/firebase';
-import { Loading, ToastProvider } from '@pe/shared/ui';
+import { Button, Loading, ToastProvider } from '@pe/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BottomNav, type Tab } from './components/BottomNav';
 import { ParentDataProvider, useParentData } from './data';
@@ -44,6 +44,24 @@ function Gate() {
   );
 }
 
+function LoadError() {
+  const { signOut } = useAuth();
+  return (
+    <div className="safe-top flex h-full flex-col justify-center gap-4 bg-ground p-8">
+      <h1 className="font-display text-2xl font-bold">Chargement impossible</h1>
+      <p className="leading-relaxed text-ink-2">
+        Vos informations n'ont pas pu être chargées. Vérifiez votre connexion internet puis réessayez.
+      </p>
+      <Button size="lg" onClick={() => window.location.reload()}>
+        Réessayer
+      </Button>
+      <Button variant="ghost" onClick={() => void signOut()}>
+        Se déconnecter
+      </Button>
+    </div>
+  );
+}
+
 function Splash() {
   return (
     <div className="flex h-full items-center justify-center bg-brand text-white">
@@ -63,7 +81,7 @@ export interface Nav {
 
 function Shell() {
   const { user } = useAuth();
-  const { loading, children } = useParentData();
+  const { loading, children, error } = useParentData();
   const [tab, setTab] = useState<Tab>('home');
   const [overlay, setOverlay] = useState<Overlay>(null);
   const state = useRef({ tab, overlay });
@@ -101,6 +119,7 @@ function Shell() {
   }, [user]);
 
   if (loading) return <Splash />;
+  if (error && children.length === 0) return <LoadError />;
 
   // Pas encore d'enfant lié : on commence par là.
   if (children.length === 0) return <AddChild first onDone={() => go('home')} />;

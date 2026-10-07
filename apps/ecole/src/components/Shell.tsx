@@ -46,6 +46,7 @@ import { StaffPage } from '../pages/Staff';
 import { StudentsPage } from '../pages/Students';
 import { navigate, useRoute } from '../router';
 import { useSchool } from '../school';
+import { AccessError } from '../pages/SuperSchools';
 
 interface NavItem {
   route: string;
@@ -81,7 +82,8 @@ const HOME: Record<StaffRole, string> = { admin: 'tableau', surveillant: 'appel'
 export function Shell({ onLeaveSchool }: { onLeaveSchool?: () => void }) {
   const role = useRole();
   const route = useRoute();
-  const { school, loading } = useSchool();
+  const { school, loading, error } = useSchool();
+  const { signOut } = useAuth();
   const [drawer, setDrawer] = useState(false);
   const online = useOnline();
   const items = NAV.filter((n) => n.roles.includes(role));
@@ -119,7 +121,7 @@ export function Shell({ onLeaveSchool }: { onLeaveSchool?: () => void }) {
           </div>
         )}
         <main className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-8">
-          {loading || !school ? <Loading /> : current ? current.page() : null}
+          {error ? <AccessError onSignOut={() => void signOut()} /> : loading || !school ? <Loading /> : current ? current.page() : null}
         </main>
       </div>
     </div>
