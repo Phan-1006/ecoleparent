@@ -123,7 +123,18 @@ export function Login() {
           </button>
         </form>
         <p className="text-center text-[13px] leading-relaxed text-ink-3">
-          Vous êtes parent ? Téléchargez l'application ParentEcole sur votre téléphone Android.
+          Vous êtes parent ? Utilisez l'application ParentEcole sur Android
+          {import.meta.env.VITE_PARENT_URL ? (
+            <>
+              {' '}
+              ou l'espace parent en ligne :{' '}
+              <a className="font-bold text-brand" href={import.meta.env.VITE_PARENT_URL}>
+                {import.meta.env.VITE_PARENT_URL.replace(/^https?:\/\//, '')}
+              </a>
+            </>
+          ) : (
+            '.'
+          )}
         </p>
       </div>
     </Frame>

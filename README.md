@@ -2,7 +2,7 @@
 
 Suivi scolaire entre l'école et les parents.
 
-- **App Android des parents** (`apps/parent`) : présence du jour, frais et dates de renvoi, reçus, devoirs, conduite, communiqués, agenda.
+- **App des parents** (`apps/parent`), en APK Android et en site web installable (iPhone, ordinateur) : présence du jour, frais et dates de renvoi, reçus, devoirs, conduite, communiqués, agenda.
 - **Site web de l'école** (`apps/ecole`) : direction, surveillants, professeurs, caissiers, et super-administrateur de la plateforme.
 - **Une seule base de données** (Firebase Firestore) : ce que l'école saisit apparaît aussitôt chez les parents, et l'app reste lisible sans réseau.
 
@@ -74,9 +74,16 @@ Sans clé de signature, l'APK est signé en mode « debug » et la connexion Goo
 
 Pour construire en local (Android Studio ou SDK installé) : `npm run android:sync`, puis ouvrez `apps/parent/android`.
 
-### 4. Mettre le site de l'école en ligne
+### 4. Mettre les sites en ligne
 
-Le site est servi gratuitement par Firebase Hosting. Le workflow **Déploiement Firebase** publie le site, les règles et les index à chaque push sur `main`, une fois le secret `FIREBASE_SERVICE_ACCOUNT` ajouté. Pour obtenir ce secret : console Google Cloud › IAM › Comptes de service › clé JSON, avec le rôle *Firebase Admin*.
+Deux sites Firebase Hosting (cibles `ecole` et `parents` dans `.firebaserc`) :
+
+```bash
+npm run build
+firebase deploy --only hosting,firestore:rules,firestore:indexes
+```
+
+Le domaine de chaque site doit figurer dans Authentication › Paramètres › Domaines autorisés (pour la connexion Google). Le workflow **Déploiement Firebase** publie le site, les règles et les index à chaque push sur `main`, une fois le secret `FIREBASE_SERVICE_ACCOUNT` ajouté. Pour obtenir ce secret : console Google Cloud › IAM › Comptes de service › clé JSON, avec le rôle *Firebase Admin*.
 
 ## Sécurité
 

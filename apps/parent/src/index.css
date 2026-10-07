@@ -19,3 +19,16 @@ body {
 .safe-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
 }
+
+/* Navigateur d'ordinateur : l'app reste une colonne de téléphone, centrée. */
+@media (min-width: 640px) {
+  body {
+    background: #dfe4dc;
+  }
+  #root {
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--color-ground);
+    box-shadow: 0 0 0 1px #d2d8cf, 0 24px 60px -20px rgb(22 35 28 / 0.35);
+  }
+}

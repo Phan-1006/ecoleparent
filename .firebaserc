@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "parentecole-app"
+  },
+  "targets": {
+    "parentecole-app": {
+      "hosting": {
+        "ecole": [
+          "parentecole-app"
+        ],
+        "parents": [
+          "parentecole"
+        ]
+      }
+    }
   }
 }

@@ -1,4 +1,4 @@
-name: Déploiement Firebase (site école + règles)
+name: Déploiement Firebase (sites école et parents + règles)
 
 on:
   push:
@@ -34,8 +34,11 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET=${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_MESSAGING_SENDER_ID=${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID=${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_GOOGLE_WEB_CLIENT_ID=${{ vars.VITE_GOOGLE_WEB_CLIENT_ID }}
+          VITE_ECOLE_URL=${{ vars.VITE_ECOLE_URL }}
+          VITE_PARENT_URL=${{ vars.VITE_PARENT_URL }}
           ENV
-          npm run build -w @pe/ecole
+          npm run build
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           npx -y firebase-tools@15 deploy --only hosting,firestore:rules,firestore:indexes --project "$PROJECT_ID" --non-interactive
