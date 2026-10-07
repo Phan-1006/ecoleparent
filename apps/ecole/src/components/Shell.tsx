@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   LogOut,
+  MonitorDown,
   Megaphone,
   Menu,
   Receipt,
@@ -27,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useAccess, useRole } from '../access';
+import { useInstallPrompt } from '../install';
 import { AnnouncementsPage } from '../pages/Announcements';
 import { CashierPage } from '../pages/Cashier';
 import { ClassesPage } from '../pages/Classes';
@@ -129,6 +131,7 @@ function Sidebar({ items, route, onLeaveSchool, onClose }: { items: NavItem[]; r
   const access = useAccess();
   const role = useRole();
   const { school } = useSchool();
+  const install = useInstallPrompt();
   const sections = [...new Set(items.map((i) => i.section))];
 
   return (
@@ -179,6 +182,16 @@ function Sidebar({ items, route, onLeaveSchool, onClose }: { items: NavItem[]; r
           </div>
         ))}
       </div>
+
+      {install && (
+        <button
+          type="button"
+          onClick={() => void install()}
+          className="mx-3 mb-3 flex min-h-11 items-center gap-2 rounded-xl border border-brand-2 px-3 text-sm font-semibold text-white hover:bg-brand-2"
+        >
+          <MonitorDown size={18} aria-hidden="true" /> Installer sur cet ordinateur
+        </button>
+      )}
 
       <div className="border-t border-brand-2 px-5 py-4">
         <div className="truncate text-sm font-bold">{access.name}</div>

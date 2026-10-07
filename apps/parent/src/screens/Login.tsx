@@ -63,8 +63,6 @@ export function Login() {
     }
   }
 
-  const ecoleUrl = import.meta.env.VITE_ECOLE_URL;
-
   return (
     <div className="h-full overflow-y-auto bg-brand">
       <div className="safe-top flex flex-col gap-6 px-7 pt-12 pb-12 text-white">
@@ -173,19 +171,6 @@ export function Login() {
               Retour à la connexion
             </button>
           )}
-
-
-          <p className="pt-2 text-center text-[13px] leading-relaxed text-ink-3">
-            Directeur, enseignant ou caissier ? Connectez-vous sur le site de l'école
-            {ecoleUrl ? (
-              <>
-                {' '}
-                : <span className="font-semibold text-ink-2">{ecoleUrl}</span>
-              </>
-            ) : (
-              '.'
-            )}
-          </p>
         </form>
       </div>
     </div>
