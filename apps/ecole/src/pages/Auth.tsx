@@ -7,6 +7,8 @@ import { School, ShieldCheck } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 
+const LEGAL_URL = import.meta.env.VITE_PARENT_URL || 'https://parentecole.web.app';
+
 function Frame({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-brand md:flex-row">
@@ -139,14 +141,14 @@ export function Login() {
             '.'
           )}
         </p>
-        <a
-          href={`${import.meta.env.VITE_PARENT_URL || 'https://parentecole.web.app'}/confidentialite.html`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-center text-[13px] text-ink-3 underline"
-        >
-          Politique de confidentialité
-        </a>
+        <p className="flex flex-wrap justify-center gap-x-4 text-[13px] text-ink-3">
+          <a href={`${LEGAL_URL}/confidentialite.html`} target="_blank" rel="noreferrer" className="underline">
+            Politique de confidentialité
+          </a>
+          <a href={`${LEGAL_URL}/conditions.html`} target="_blank" rel="noreferrer" className="underline">
+            Conditions d'utilisation
+          </a>
+        </p>
       </div>
     </Frame>
   );

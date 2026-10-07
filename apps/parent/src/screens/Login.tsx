@@ -7,7 +7,7 @@ import { googleSignInAvailable, isNative, nativeGoogleIdToken, setStatusBarOnDar
 
 type Mode = 'signin' | 'signup' | 'reset';
 
-const PRIVACY_URL = `${import.meta.env.VITE_PARENT_URL || 'https://parentecole.web.app'}/confidentialite.html`;
+const SITE_URL = import.meta.env.VITE_PARENT_URL || 'https://parentecole.web.app';
 
 export function Login() {
   const { signIn, signUp, resetPassword, signInWithGoogle, signInWithGoogleIdToken } = useAuth();
@@ -173,9 +173,14 @@ export function Login() {
               Retour à la connexion
             </button>
           )}
-          <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="pt-2 text-center text-[13px] text-ink-3 underline">
-            Politique de confidentialité
-          </a>
+          <p className="flex flex-wrap justify-center gap-x-4 pt-2 text-[13px] text-ink-3">
+            <a href={`${SITE_URL}/confidentialite.html`} target="_blank" rel="noreferrer" className="underline">
+              Politique de confidentialité
+            </a>
+            <a href={`${SITE_URL}/conditions.html`} target="_blank" rel="noreferrer" className="underline">
+              Conditions d'utilisation
+            </a>
+          </p>
         </form>
       </div>
     </div>
