@@ -89,6 +89,8 @@ Le domaine de chaque site doit figurer dans Authentication › Paramètres › D
 
 - **Pas de mot de passe dans le code.** Les comptes sont gérés par Firebase Authentication. Les droits sont vérifiés par le serveur (`firestore.rules`), pas par le téléphone.
 - **Personnel.** Une personne a des droits seulement si son e-mail (vérifié) figure dans `members/{email}` avec un rôle. Un professeur n'agit que sur ses classes.
+- **Vérification en deux étapes du personnel.** À la première connexion au site de l'école, chaque membre du personnel (et chaque super-administrateur) inscrit une application d'authentification (Google Authenticator, Microsoft Authenticator…). Le code à 6 chiffres est ensuite demandé à chaque connexion. Les règles Firestore refusent toute donnée de l'école à une session ouverte sans ce code. Les parents ne sont pas concernés.
+  - Téléphone perdu : dans la console Firebase › Authentication › Utilisateurs, supprimez le compte de la personne. Elle se reconnecte avec le même e-mail et réinscrit une application. Ses droits (liés à son e-mail) sont conservés.
 - **Parents.** Pour lier un enfant, il faut son code élève **et** un numéro de téléphone enregistré par l'école pour cet élève. Les matricules ne peuvent pas être listés.
 - **Contrôle.** `npm run test:rules` vérifie ces règles contre l'émulateur (Java requis). La CI le fait à chaque push.
 

@@ -74,6 +74,13 @@ export function errorMessage(error: unknown): string {
     'auth/network-request-failed': 'Pas de connexion internet.',
     'auth/popup-closed-by-user': 'Connexion annulée.',
     'auth/popup-blocked': 'Le navigateur a bloqué la fenêtre de connexion. Autorisez les fenêtres pour ce site.',
+    'auth/invalid-verification-code': 'Code incorrect. Vérifiez que l’heure de votre téléphone est juste, puis réessayez avec le code suivant.',
+    'auth/missing-code': 'Saisissez le code à 6 chiffres.',
+    'auth/requires-recent-login': 'Par sécurité, reconnectez-vous puis recommencez.',
+    'auth/unverified-email': 'Vérifiez d’abord votre adresse e-mail.',
+    'auth/totp-challenge-timeout': 'Délai dépassé : reconnectez-vous.',
+    'auth/code-expired': 'Délai dépassé : reconnectez-vous.',
+    'auth/maximum-second-factor-count-exceeded': 'Ce compte a déjà le nombre maximal de méthodes de vérification.',
   };
   if (map[code]) return map[code];
   if (error instanceof Error && error.message) return error.message;

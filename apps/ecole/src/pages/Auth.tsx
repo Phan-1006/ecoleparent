@@ -1,8 +1,11 @@
 import { errorMessage } from '@pe/shared/api';
-import { useAuth } from '@pe/shared/auth';
-import { Button, ErrorNote, Field, Segmented } from '@pe/shared/ui';
-import { School } from 'lucide-react';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { finishTotpEnrollment, startTotpEnrollment, useAuth } from '@pe/shared/auth';
+import { CodeInput } from '@pe/shared/mfa';
+import { Button, ErrorNote, Field, Loading, Segmented } from '@pe/shared/ui';
+import type { TotpSecret } from 'firebase/auth';
+import { School, ShieldCheck } from 'lucide-react';
+import QRCode from 'qrcode';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 
 function Frame({ children }: { children: ReactNode }) {
   return (
@@ -225,5 +228,125 @@ function GoogleMark() {
       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
     </svg>
+  );
+}
+
+/** Première connexion du personnel : inscription obligatoire d'une application d'authentification. */
+export function EnrollMfa() {
+  const { user, signOut } = useAuth();
+  const [setup, setSetup] = useState<{ secret: TotpSecret; qrUrl: string } | null>(null);
+  const [qr, setQr] = useState('');
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [relogin, setRelogin] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    startTotpEnrollment(user)
+      .then(async (s) => {
+        if (!alive) return;
+        setSetup(s);
+        setQr(await QRCode.toDataURL(s.qrUrl, { margin: 1, width: 240, color: { dark: '#16231c', light: '#ffffff' } }));
+      })
+      .catch((e) => {
+        if (!alive) return;
+        if ((e as { code?: string }).code === 'auth/requires-recent-login') setRelogin(true);
+        else setError(errorMessage(e));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [user]);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!user || !setup || code.length !== 6) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await finishTotpEnrollment(user, setup.secret, code);
+    } catch (err) {
+      setError(errorMessage(err));
+      setCode('');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const key = setup?.secret.secretKey.replace(/(.{4})/g, '$1 ').trim();
+
+  return (
+    <Frame>
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <span className="flex items-center gap-2 text-[13px] font-bold tracking-wider text-brand uppercase">
+            <ShieldCheck size={16} aria-hidden="true" /> Sécurité du compte
+          </span>
+          <h2 className="font-display text-2xl font-bold">Activez la vérification en deux étapes</h2>
+          <p className="text-[15px] leading-relaxed text-ink-2">
+            Le personnel de l'école accède à des données sensibles. Un code à 6 chiffres, généré par une application sur votre téléphone, vous
+            sera demandé à chaque connexion.
+          </p>
+        </div>
+        {relogin ? (
+          <>
+            <ErrorNote>Par sécurité, reconnectez-vous avant d'activer la vérification en deux étapes.</ErrorNote>
+            <Button onClick={() => void signOut()}>Se reconnecter</Button>
+          </>
+        ) : !setup ? (
+          error ? <ErrorNote>{error}</ErrorNote> : <Loading label="Préparation…" />
+        ) : (
+          <>
+            <ol className="flex list-decimal flex-col gap-2 pl-5 text-[15px] leading-relaxed text-ink-2">
+              <li>
+                Installez <strong>Google Authenticator</strong> ou <strong>Microsoft Authenticator</strong> sur votre téléphone.
+              </li>
+              <li>Dans l'application, touchez « + » puis « Scanner un code QR », et visez ce code :</li>
+            </ol>
+            {qr && <img src={qr} alt="QR code à scanner avec l'application d'authentification" className="size-48 self-center rounded-xl border border-line" />}
+            <p className="text-center text-[13px] text-ink-3">
+              Pas de caméra ? Choisissez « Saisir une clé » et tapez : <span className="font-mono font-bold break-all text-ink">{key}</span>
+            </p>
+            <ol start={3} className="list-decimal pl-5 text-[15px] leading-relaxed text-ink-2">
+              <li>Saisissez le code à 6 chiffres affiché par l'application :</li>
+            </ol>
+            {error && <ErrorNote>{error}</ErrorNote>}
+            <label htmlFor="enroll-code" className="sr-only">
+              Code à 6 chiffres
+            </label>
+            <CodeInput id="enroll-code" value={code} onChange={setCode} />
+            <Button type="submit" size="lg" block loading={busy} disabled={code.length !== 6}>
+              Activer
+            </Button>
+            <p className="text-[13px] leading-relaxed text-ink-3">
+              Gardez ce téléphone : le code sera demandé à chaque connexion. En cas de perte, contactez l'administrateur de la plateforme.
+            </p>
+          </>
+        )}
+        <Button variant="ghost" onClick={() => void signOut()}>
+          Se déconnecter
+        </Button>
+      </form>
+    </Frame>
+  );
+}
+
+/** Session ouverte sans le code (par exemple avant l'activation) : il faut se reconnecter. */
+export function MfaRelogin() {
+  const { signOut } = useAuth();
+  return (
+    <Frame>
+      <div className="flex flex-col gap-4">
+        <h2 className="font-display text-2xl font-bold">Reconnectez-vous</h2>
+        <p className="leading-relaxed text-ink-2">
+          Cette session a été ouverte sans le code de votre application d'authentification. Reconnectez-vous : le code vous sera demandé.
+        </p>
+        <Button size="lg" onClick={() => void signOut()}>
+          Se reconnecter
+        </Button>
+      </div>
+    </Frame>
   );
 }

@@ -16,7 +16,8 @@ let env: RulesTestEnvironment;
 const SCHOOL = 'horizon';
 const OTHER = 'saint-joseph';
 
-const staff = (email: string) => ({ email, email_verified: true });
+// Personnel connecté avec le code de son application d'authentification.
+const staff = (email: string) => ({ email, email_verified: true, firebase: { sign_in_provider: 'google.com', sign_in_second_factor: 'totp' } });
 
 function db(uid: string | null, token?: Record<string, unknown>): Firestore {
   const ctx = uid ? env.authenticatedContext(uid, token) : env.unauthenticatedContext();
@@ -106,8 +107,17 @@ describe('écoles et personnel', () => {
     await assertFails(getDocs(api.q.members(adminDb(), OTHER)));
   });
 
+  it('sans code d’authentification, le personnel et le super-administrateur n’ont aucun droit', async () => {
+    const noMfa = (email: string) => ({ email, email_verified: true, firebase: { sign_in_provider: 'google.com' } });
+    await assertFails(getDocs(api.q.students(db('dir', noMfa('dir@horizon.cd')), SCHOOL)));
+    await assertFails(getDocs(api.q.schoolPayments(db('caisse', noMfa('caisse@horizon.cd')), SCHOOL)));
+    await assertFails(api.createSchool(db('super', noMfa('super@parentecole.cd')), { name: 'X', address: '', phone: '', currency: '$', adminEmail: 'x@x.cd', adminName: 'X' }));
+    // Il peut quand même lire sa propre fiche (pour que le site sache quel écran afficher).
+    await assertSucceeds(getDoc(doc(db('dir', noMfa('dir@horizon.cd')), 'members/dir@horizon.cd')));
+  });
+
   it('un compte à e-mail non vérifié n’a aucun droit de personnel', async () => {
-    const unverified = db('dir', { email: 'dir@horizon.cd', email_verified: false });
+    const unverified = db('dir', { email: 'dir@horizon.cd', email_verified: false, firebase: { sign_in_provider: 'password', sign_in_second_factor: 'totp' } });
     await assertFails(getDocs(api.q.students(unverified, SCHOOL)));
   });
 

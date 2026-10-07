@@ -1,5 +1,6 @@
 import { addFcmToken, saveUserProfile } from '@pe/shared/api';
 import { AuthProvider, useAuth } from '@pe/shared/auth';
+import { MfaChallenge } from '@pe/shared/mfa';
 import { getFirebase, isFirebaseConfigured } from '@pe/shared/firebase';
 import { Loading, ToastProvider } from '@pe/shared/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -32,8 +33,9 @@ export function App() {
 }
 
 function Gate() {
-  const { user, loading } = useAuth();
+  const { user, loading, mfaPending } = useAuth();
   if (loading) return <Splash />;
+  if (mfaPending) return <MfaChallenge />;
   if (!user) return <Login />;
   return (
     <ParentDataProvider key={user.uid}>

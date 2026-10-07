@@ -1,7 +1,8 @@
 rules_version = '2';
 
 // Règles de sécurité ParentEcole.
-// Personnel : document members/{email} (e-mail vérifié obligatoire).
+// Personnel : document members/{email}, e-mail vérifié ET connexion avec le code
+//             d'une application d'authentification (double authentification TOTP).
 // Super-administrateurs : document superadmins/{email}, créé à la main dans la console.
 // Parents : students/{id}/parents/{uid}, créé seulement si le téléphone donné
 //           figure dans student.parentPhoneKeys.
@@ -23,6 +24,11 @@ service cloud.firestore {
       return signedIn() && request.auth.token.email_verified == true;
     }
 
+    // Jeton obtenu avec un second facteur (code à 6 chiffres d'une application d'authentification).
+    function hasSecondFactor() {
+      return signedIn() && 'sign_in_second_factor' in request.auth.token.firebase;
+    }
+
     function memberPath() {
       return /databases/$(database)/documents/members/$(myEmail());
     }
@@ -32,11 +38,11 @@ service cloud.firestore {
     }
 
     function isMember() {
-      return verified() && exists(memberPath()) && me().active == true;
+      return verified() && hasSecondFactor() && exists(memberPath()) && me().active == true;
     }
 
     function isSuper() {
-      return verified() && exists(/databases/$(database)/documents/superadmins/$(myEmail()));
+      return verified() && hasSecondFactor() && exists(/databases/$(database)/documents/superadmins/$(myEmail()));
     }
 
     function inSchool(schoolId) {
