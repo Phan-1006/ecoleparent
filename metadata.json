@@ -1,6 +1,0 @@
-{
-  "name": "ParentEcole",
-  "description": "Plateforme intégrée de suivi scolaire pour parents, directeurs d'écoles, enseignants et surveillants avec gestion financière et suivi en temps réel.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

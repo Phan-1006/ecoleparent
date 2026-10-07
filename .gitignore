@@ -1,8 +1,19 @@
 node_modules/
-build/
 dist/
+build/
 coverage/
+lib/
 .DS_Store
 *.log
-.env*
+.env
+.env.*
 !.env.example
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+# Android (Capacitor)
+apps/parent/android/app/google-services.json
+apps/parent/android/keystore.properties
+*.jks
+*.keystore

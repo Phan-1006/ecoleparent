@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+@import '@pe/shared/theme.css';
+@source '../../../packages/shared/src';
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+/* Zones protégées (encoche, barre de gestes) sur Android en plein écran. */
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+}
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
+}
