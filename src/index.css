@@ -1,7 +1,0 @@
-@import "tailwindcss";
-
-@supports (padding: max(0px)) {
-  .safe-bottom {
-    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
-  }
-}

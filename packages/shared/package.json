@@ -1,0 +1,21 @@
+{
+  "name": "@pe/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./theme.css": "./src/theme.css",
+    "./ui": "./src/ui.tsx",
+    "./auth": "./src/auth.tsx",
+    "./mfa": "./src/mfa.tsx",
+    "./api": "./src/api/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "firebase": "^12.19.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

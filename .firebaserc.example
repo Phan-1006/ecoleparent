@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "VOTRE-ID-DE-PROJET-FIREBASE"
+  },
+  "targets": {
+    "VOTRE-ID-DE-PROJET-FIREBASE": {
+      "hosting": {
+        "ecole": [
+          "SITE-ECOLE"
+        ],
+        "parents": [
+          "SITE-PARENTS"
+        ]
+      }
+    }
+  }
+}

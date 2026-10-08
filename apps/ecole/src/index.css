@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+@import '@pe/shared/theme.css';
+@source '../../../packages/shared/src';
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+/* Impression : seule la zone .print-area (reçu, fiche élève) sort sur papier. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+}
