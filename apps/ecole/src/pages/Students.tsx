@@ -10,14 +10,15 @@ import {
   type Attendance,
   type Conduct,
   type ParentLink,
+  type PickupPerson,
   type Student,
 } from '@pe/shared';
 import { createStudent, deleteStudent, q, refs, setStudentActive, updateStudent, type StudentInput } from '@pe/shared/api';
 import { getFirebase } from '@pe/shared/firebase';
 import { useLiveQuery } from '@pe/shared/hooks';
-import { Badge, Button, Checkbox, Empty, ErrorNote, Field, Modal, SelectField, cx } from '@pe/shared/ui';
+import { Badge, Button, Checkbox, Empty, ErrorNote, Field, IconButton, Modal, SelectField, TextArea, cx } from '@pe/shared/ui';
 import { query } from 'firebase/firestore';
-import { Pencil, Plus, Printer, Users } from 'lucide-react';
+import { HeartPulse, Pencil, Plus, Printer, Trash2, Users, ScanText } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useRole } from '../access';
@@ -47,16 +48,21 @@ export function StudentsPage() {
         description={isAdmin ? "Inscrivez les élèves et remettez à chaque famille sa fiche d'accès (code élève et QR code)." : undefined}
         actions={
           isAdmin && (
-            <Button icon={<Plus size={18} aria-hidden="true" />} onClick={() => setEditing('new')} disabled={classes.length === 0}>
-              Inscrire un élève
-            </Button>
+            <>
+              <Button variant="secondary" icon={<ScanText size={17} aria-hidden="true" />} onClick={() => (window.location.hash = '/importer?type=students')} disabled={classes.length === 0}>
+                Importer une liste
+              </Button>
+              <Button icon={<Plus size={18} aria-hidden="true" />} onClick={() => setEditing('new')} disabled={classes.length === 0}>
+                Inscrire un élève
+              </Button>
+            </>
           )
         }
       />
       {isAdmin && classes.length === 0 && (
         <div className="mb-4">
           <ErrorNote>
-            Créez d'abord au moins une classe dans <a href="#/classes" className="font-bold underline">Classes</a>.
+            Créez d'abord au moins une classe dans <a href="#/classes" className="font-semibold underline">Classes</a>.
           </ErrorNote>
         </div>
       )}
@@ -66,7 +72,7 @@ export function StudentsPage() {
           aria-label="Filtrer par classe"
           value={classId}
           onChange={(e) => setClassId(e.target.value)}
-          className="h-12 rounded-xl border border-[#c4ccc6] bg-surface px-3 text-[15px] sm:w-56"
+          className="h-12 rounded-xl border border-field bg-surface px-3 text-[15px] sm:w-56"
         >
           <option value="">Toutes les classes</option>
           {visibleClasses.map((c) => (
@@ -94,7 +100,7 @@ export function StudentsPage() {
           {list.map((s) => (
             <tr key={s.id} className="hover:bg-ground/50">
               <td>
-                <button type="button" onClick={() => setViewing(s)} className="text-left font-bold text-ink hover:text-brand">
+                <button type="button" onClick={() => setViewing(s)} className="text-left font-semibold text-ink hover:text-brand">
                   {fullName(s)}
                 </button>
                 <div className="text-xs text-ink-3">
@@ -151,6 +157,11 @@ function StudentForm({ student, onClose, onCreated }: { student: Student | null;
     hasTransport: student?.hasTransport ?? false,
     hasCantine: student?.hasCantine ?? false,
     customFeeIds: student?.customFeeIds ?? [],
+    bloodType: student?.bloodType ?? '',
+    allergies: student?.allergies ?? '',
+    medicalNotes: student?.medicalNotes ?? '',
+    emergencyContact: student?.emergencyContact ?? '',
+    pickups: student?.pickups ?? [],
   }));
   const set = <K extends keyof StudentInput>(k: K, v: StudentInput[K]) => setF((x) => ({ ...x, [k]: v }));
   const specialFees = fees.filter((fee) => fee.type === 'special');
@@ -161,7 +172,19 @@ function StudentForm({ student, onClose, onCreated }: { student: Student | null;
     if (!isValidPhone(f.parentPhone)) return setError('Le téléphone du parent doit compter au moins 9 chiffres.');
     if (f.parentPhone2 && !isValidPhone(f.parentPhone2)) return setError('Le second téléphone doit compter au moins 9 chiffres.');
     const className = classes.find((c) => c.id === f.classId)?.name ?? '';
-    const data = { ...f, className, birthDate: f.birthDate || undefined, parentEmail: f.parentEmail?.trim() || undefined };
+    const pickups = (f.pickups ?? []).map((p) => ({ name: p.name.trim(), relation: p.relation.trim(), phone: p.phone.trim() })).filter((p) => p.name);
+    if (pickups.some((p) => !isValidPhone(p.phone))) return setError('Indiquez un téléphone valide pour chaque personne autorisée.');
+    const data = {
+      ...f,
+      className,
+      birthDate: f.birthDate || undefined,
+      parentEmail: f.parentEmail?.trim() || undefined,
+      bloodType: f.bloodType || '',
+      allergies: f.allergies?.trim() ?? '',
+      medicalNotes: f.medicalNotes?.trim() ?? '',
+      emergencyContact: f.emergencyContact?.trim() ?? '',
+      pickups,
+    };
     if (student) {
       const ok = await run(async () => {
         await updateStudent(db, student, data);
@@ -197,7 +220,7 @@ function StudentForm({ student, onClose, onCreated }: { student: Student | null;
             ))}
           </SelectField>
         </div>
-        <h3 className="mt-2 font-display text-base font-bold">Parent ou tuteur</h3>
+        <h3 className="mt-2 text-base font-semibold">Parent ou tuteur</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Nom du parent" value={f.parentName} onChange={(e) => set('parentName', e.target.value)} required />
           <Field label="E-mail (facultatif)" type="email" value={f.parentEmail ?? ''} onChange={(e) => set('parentEmail', e.target.value)} />
@@ -211,7 +234,7 @@ function StudentForm({ student, onClose, onCreated }: { student: Student | null;
           />
           <Field label="Second téléphone (facultatif)" type="tel" value={f.parentPhone2 ?? ''} onChange={(e) => set('parentPhone2', e.target.value)} hint="Autre parent ou tuteur." />
         </div>
-        <h3 className="mt-2 font-display text-base font-bold">Services et frais</h3>
+        <h3 className="mt-2 text-base font-semibold">Services et frais</h3>
         <div className="grid gap-1 sm:grid-cols-2">
           <Checkbox label="Transport scolaire" checked={f.hasTransport} onChange={(e) => set('hasTransport', e.target.checked)} />
           <Checkbox label="Cantine" checked={f.hasCantine} onChange={(e) => set('hasCantine', e.target.checked)} />
@@ -225,6 +248,20 @@ function StudentForm({ student, onClose, onCreated }: { student: Student | null;
             />
           ))}
         </div>
+        <h3 className="mt-2 text-base font-semibold">Santé (visible par le personnel et les parents)</h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <SelectField label="Groupe sanguin" value={f.bloodType ?? ''} onChange={(e) => set('bloodType', e.target.value)}>
+            <option value="">Inconnu</option>
+            {['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'].map((g) => (
+              <option key={g}>{g}</option>
+            ))}
+          </SelectField>
+          <Field label="Allergies" value={f.allergies ?? ''} onChange={(e) => set('allergies', e.target.value)} placeholder="Arachides, pénicilline…" wrapperClassName="sm:col-span-2" />
+          <Field label="Contact d'urgence" value={f.emergencyContact ?? ''} onChange={(e) => set('emergencyContact', e.target.value)} placeholder="Tante Marie · 0990 000 000" wrapperClassName="sm:col-span-3" />
+          <TextArea label="Remarques médicales" rows={2} value={f.medicalNotes ?? ''} onChange={(e) => set('medicalNotes', e.target.value)} placeholder="Asthme : ventoline dans le sac" wrapperClassName="sm:col-span-3" />
+        </div>
+        <h3 className="mt-2 text-base font-semibold">Personnes autorisées à récupérer l'enfant</h3>
+        <PickupsEditor value={f.pickups ?? []} onChange={(v) => set('pickups', v)} />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>
             Annuler
@@ -294,16 +331,16 @@ function StudentSheet({ student: s, onClose, onEdit }: { student: Student; onClo
     >
       <div className="flex flex-col gap-5">
         {/* Fiche d'accès imprimable remise aux parents */}
-        <div className="print-area rounded-[20px] border-2 border-dashed border-brand/40 p-5">
+        <div className="print-area rounded-[14px] border-2 border-dashed border-brand/40 p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             {qr && <img src={qr} alt={`QR code du matricule ${s.matricule}`} className="size-36 shrink-0 self-center rounded-xl border border-line" />}
             <div className="flex flex-col gap-1">
-              <span className="text-xs font-bold tracking-wider text-brand uppercase">{school?.name} · accès parent ParentEcole</span>
-              <span className="font-display text-xl font-bold">
+              <span className="text-xs font-semibold tracking-wider text-brand uppercase">{school?.name} · accès parent ParentEcole</span>
+              <span className="text-lg font-semibold">
                 {s.firstName} {s.lastName} · {s.className}
               </span>
               <span className="text-sm text-ink-3">Code élève</span>
-              <span className="font-mono text-2xl font-bold tracking-wider">{s.matricule}</span>
+              <span className="font-mono text-2xl font-semibold tracking-wider">{s.matricule}</span>
             </div>
           </div>
           <ol className="mt-4 list-decimal space-y-1 pl-5 text-[14px] leading-relaxed text-ink-2">
@@ -326,9 +363,37 @@ function StudentSheet({ student: s, onClose, onEdit }: { student: Student; onClo
           <Info label="Statut" value={s.active ? 'Inscrit' : 'Archivé'} />
         </div>
 
+        {!!(s.bloodType || s.allergies || s.medicalNotes || s.emergencyContact || s.pickups?.length) && (
+          <section className="flex flex-col gap-2">
+            <h3 className="flex items-center gap-2 text-base font-semibold">
+              <HeartPulse size={18} className="text-danger" aria-hidden="true" /> Santé et sortie
+            </h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {s.bloodType && <Info label="Groupe sanguin" value={s.bloodType} />}
+              {s.allergies && <Info label="Allergies" value={s.allergies} />}
+              {s.emergencyContact && <Info label="Contact d'urgence" value={s.emergencyContact} />}
+              {s.medicalNotes && <Info label="Remarques médicales" value={s.medicalNotes} />}
+            </div>
+            {!!s.pickups?.length && (
+              <ul className="flex flex-col divide-y divide-line-soft text-sm">
+                {s.pickups.map((p, i) => (
+                  <li key={i} className="flex justify-between gap-3 py-2">
+                    <span>
+                      <strong>{p.name}</strong> · {p.relation}
+                    </span>
+                    <a href={`tel:${p.phone}`} className="font-semibold text-brand">
+                      {p.phone}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
         {canSeeMoney && (
           <section className="flex flex-col gap-2">
-            <h3 className="font-display text-base font-bold">Finances</h3>
+            <h3 className="text-base font-semibold">Finances</h3>
             <div className="flex flex-wrap gap-2">
               <Badge tone="brand">Payé {formatMoney(finance.paid, currency)}</Badge>
               <Badge tone={finance.remaining ? 'warn' : 'brand'}>Reste {formatMoney(finance.remaining, currency)}</Badge>
@@ -352,7 +417,7 @@ function StudentSheet({ student: s, onClose, onEdit }: { student: Student; onClo
         )}
 
         <section className="flex flex-col gap-2">
-          <h3 className="font-display text-base font-bold">Présences</h3>
+          <h3 className="text-base font-semibold">Présences</h3>
           <div className="flex flex-wrap gap-2">
             <Badge tone="brand">{sum.present} présent</Badge>
             <Badge tone="danger">{sum.absent} absent</Badge>
@@ -374,7 +439,7 @@ function StudentSheet({ student: s, onClose, onEdit }: { student: Student; onClo
 
         {conduct.data.length > 0 && (
           <section className="flex flex-col gap-2">
-            <h3 className="font-display text-base font-bold">Conduite</h3>
+            <h3 className="text-base font-semibold">Conduite</h3>
             <ul className="flex flex-col gap-1 text-sm">
               {conduct.data.slice(0, 6).map((c) => (
                 <li key={c.id} className={cx(c.severity === 'positive' ? 'text-brand' : 'text-ink-2')}>
@@ -389,10 +454,31 @@ function StudentSheet({ student: s, onClose, onEdit }: { student: Student; onClo
   );
 }
 
+function PickupsEditor({ value, onChange }: { value: PickupPerson[]; onChange: (v: PickupPerson[]) => void }) {
+  const set = (i: number, patch: Partial<PickupPerson>) => onChange(value.map((p, j) => (j === i ? { ...p, ...patch } : p)));
+  return (
+    <div className="flex flex-col gap-2">
+      {value.map((p, i) => (
+        <div key={i} className="grid grid-cols-[1fr_2.75rem] gap-2 sm:grid-cols-[1fr_9rem_10rem_2.75rem]">
+          <input aria-label="Nom" value={p.name} onChange={(e) => set(i, { name: e.target.value })} placeholder="Nom complet" className="h-11 min-w-0 rounded-xl border border-field bg-surface px-3 text-[15px]" />
+          <input aria-label="Lien avec l'enfant" value={p.relation} onChange={(e) => set(i, { relation: e.target.value })} placeholder="Oncle, chauffeur…" className="col-start-1 h-11 min-w-0 rounded-xl border border-field bg-surface px-3 text-[15px] sm:col-start-auto" />
+          <input aria-label="Téléphone" type="tel" value={p.phone} onChange={(e) => set(i, { phone: e.target.value })} placeholder="Téléphone" className="col-start-1 h-11 min-w-0 rounded-xl border border-field bg-surface px-3 text-[15px] sm:col-start-auto" />
+          <IconButton label={`Retirer ${p.name || 'cette personne'}`} onClick={() => onChange(value.filter((_, j) => j !== i))} className="col-start-2 row-start-1 text-danger-ink sm:col-start-auto">
+            <Trash2 size={18} aria-hidden="true" />
+          </IconButton>
+        </div>
+      ))}
+      <Button size="sm" variant="ghost" icon={<Plus size={16} aria-hidden="true" />} onClick={() => onChange([...value, { name: '', relation: '', phone: '' }])} className="self-start">
+        Ajouter une personne
+      </Button>
+    </div>
+  );
+}
+
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-ground px-3.5 py-2.5">
-      <div className="text-xs font-bold tracking-wide text-ink-3 uppercase">{label}</div>
+      <div className="text-xs font-semibold text-ink-3">{label}</div>
       <div className="text-[15px] font-semibold">{value}</div>
     </div>
   );

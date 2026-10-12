@@ -10,6 +10,7 @@ import type {
   SchoolEvent,
   StaffRole,
 } from '../types';
+import { queueNotification } from './notify';
 import { clean, nowISO, refs, withoutId } from './refs';
 
 // ── Écoles (super-administrateur) ──────────────────────────────────────────
@@ -53,7 +54,9 @@ export async function createSchool(db: Firestore, input: NewSchoolInput): Promis
   return ref.id;
 }
 
-export async function updateSchool(db: Firestore, schoolId: string, patch: Partial<Pick<School, 'name' | 'address' | 'phone' | 'currency'>>) {
+export type SchoolSettings = Partial<Pick<School, 'name' | 'address' | 'phone' | 'currency' | 'email' | 'hours' | 'directorName' | 'schoolYear' | 'logo' | 'saturdayClasses'>>;
+
+export async function updateSchool(db: Firestore, schoolId: string, patch: SchoolSettings) {
   await updateDoc(refs.school(db, schoolId), clean(patch));
 }
 
@@ -138,6 +141,7 @@ export async function deleteFee(db: Firestore, schoolId: string, feeId: string) 
 
 export async function publishAnnouncement(db: Firestore, a: Omit<Announcement, 'id' | 'publishedAt'>) {
   const ref = await addDoc(refs.schoolSub(db, a.schoolId, 'announcements'), clean({ ...a, publishedAt: nowISO() }));
+  void queueNotification(db, a.schoolId, 'announcement', [ref.path]);
   return ref.id;
 }
 
@@ -151,6 +155,7 @@ export async function saveEvent(db: Firestore, e: Omit<SchoolEvent, 'id'> & { id
     return e.id;
   }
   const ref = await addDoc(refs.schoolSub(db, e.schoolId, 'events'), withoutId(e));
+  void queueNotification(db, e.schoolId, 'event', [ref.path]);
   return ref.id;
 }
 
@@ -162,6 +167,7 @@ export async function deleteEvent(db: Firestore, schoolId: string, id: string) {
 
 export async function addHomework(db: Firestore, h: Omit<Homework, 'id' | 'createdAt'>) {
   const ref = await addDoc(refs.schoolSub(db, h.schoolId, 'homework'), clean({ ...h, createdAt: nowISO() }));
+  void queueNotification(db, h.schoolId, 'homework', [ref.path]);
   return ref.id;
 }
 

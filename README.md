@@ -2,7 +2,7 @@
 
 Suivi scolaire entre l'école et les parents.
 
-- **App des parents** (`apps/parent`), en APK Android et en site web installable (iPhone, ordinateur) : présence du jour, frais et dates de renvoi, reçus, devoirs, conduite, communiqués, agenda.
+- **App des parents** (`apps/parent`), en APK Android et en site web installable (iPhone, ordinateur) : notes et bulletins, devoirs, présences, horaire, frais et reçus, communiqués, agenda avec jours fériés, autorisations de sortie, rendez-vous, conduite, documents, paramètres (notifications, thème sombre, taille du texte, code de verrouillage).
 - **Site web de l'école** (`apps/ecole`) : direction, surveillants, professeurs, caissiers, et super-administrateur de la plateforme.
 - **Une seule base de données** (Firebase Firestore) : ce que l'école saisit apparaît aussitôt chez les parents, et l'app reste lisible sans réseau.
 
@@ -10,22 +10,23 @@ Suivi scolaire entre l'école et les parents.
 
 | Profil | Où | Ce qu'il fait |
 | --- | --- | --- |
-| Parent | App Android (connexion Google ou e-mail) | Lie ses enfants (code élève + son téléphone), suit présences, frais, devoirs, conduite ; justifie une absence ; marque un devoir « vu » ; partage un reçu |
-| Direction | Site école | Classes, élèves (fiche d'accès avec QR code), personnel, grille des frais et tranches, communiqués, agenda, tableau de bord |
-| Surveillant | Site école (aussi sur téléphone) | Appel express (on coche seulement les absents et retards), justifications, conduite |
-| Professeur | Site école | Appel et devoirs de ses classes, conduite |
+| Parent | App Android (connexion Google ou e-mail) | Lie ses enfants (code élève + son téléphone) ; suit notes, bulletins, devoirs, présences, horaire, frais, conduite ; justifie une absence ; marque un devoir « vu » ; signe les autorisations de sortie ; répond aux réunions ; réserve un rendez-vous ; confirme la lecture des communiqués importants ; demande une attestation ou l'ajout d'une personne autorisée ; partage un reçu ou un bulletin |
+| Direction | Site école | Classes et branches (maxima), élèves (santé, personnes autorisées, fiche d'accès avec QR code), personnel, frais et tranches, bulletins (calcul, place, mentions, publication, impression), horaire, communiqués (lecture confirmée), agenda (réunions, congés ; jours fériés d'office), autorisations, documents, demandes des parents (attestation imprimable), paramètres (logo, année scolaire), tableau de bord |
+| Surveillant | Site école (aussi sur téléphone) | Appel express (on coche seulement les absents et retards ; alerte les jours sans cours), justifications, conduite (points, tableau d'honneur), demandes des parents, rendez-vous |
+| Professeur | Site école | Notes de ses classes (interrogations, examens, récapitulatif de période), appel, devoirs, conduite, rendez-vous avec les parents |
 | Caissier | Site école | Encaissement avec reçu imprimable, historique, liste de recouvrement exportable |
 | Super-administrateur | Site école | Crée les écoles et leur directeur, peut ouvrir n'importe quelle école |
 
 ## Organisation du code
 
 ```
-packages/shared/   Types, logique des frais et des présences, accès Firestore, composants d'interface
+packages/shared/   Types, logique des frais, des présences, des notes et bulletins (système de la RDC), jours fériés, accès Firestore, composants d'interface
 apps/parent/       App des parents (React + Capacitor) ; android/ = projet Android
 apps/ecole/        Site de l'école (React)
-functions/         Notifications push (facultatif, plan Blaze)
+push/              Envoi des notifications push (Cloudflare Worker, offre gratuite)
+functions/         Variante de l'envoi en Cloud Functions (plan Blaze, non utilisée)
 firestore.rules    Règles de sécurité (qui peut lire et écrire quoi)
-tests/             Tests des règles contre l'émulateur Firestore
+tests/             Tests des règles et du Worker de notifications contre l'émulateur Firestore
 ```
 
 ## Mise en route
@@ -94,23 +95,53 @@ Le domaine de chaque site doit figurer dans Authentication › Paramètres › D
 - **Parents.** Pour lier un enfant, il faut son code élève **et** un numéro de téléphone enregistré par l'école pour cet élève. Les matricules ne peuvent pas être listés.
 - **Contrôle.** `npm run test:rules` vérifie ces règles contre l'émulateur (Java requis). La CI le fait à chaque push.
 
-## Notifications push (facultatif)
+## Notifications push
 
-Elles exigent le **plan Blaze** de Firebase (paiement à l'usage, gratuit dans les limites habituelles d'une école).
+Elles passent par un **Cloudflare Worker gratuit** (dossier `push/`), sans le plan Blaze de Firebase :
 
-1. Dans la console Firebase, ajoutez une application **Android** avec l'identifiant `cd.parentecole.app`, puis téléchargez `google-services.json`.
-2. Ajoutez-le en secret GitHub `GOOGLE_SERVICES_JSON`, encodé en base64 (`base64 -w0 google-services.json`). L'APK active alors les notifications.
-3. Déployez les fonctions : `npm --prefix functions install && npx firebase-tools deploy --only functions`.
+1. Quand l'école enregistre une absence ou un retard, un paiement, une note de conduite, un devoir, une note, un bulletin, un communiqué, une date d'agenda, une autorisation de sortie, la réponse à un rendez-vous ou à une demande, le site dépose une demande dans `notifications/{id}` (seulement des chemins de documents ; les règles n'autorisent que le personnel de l'école).
+2. Le Worker passe chaque minute, et tout de suite quand le site l'appelle (`POST /kick` avec le jeton Firebase). Avec un compte de service limité (`parentecole-push` : lecture-écriture Firestore et envoi FCM), il relit les documents, vérifie qu'ils sont bien de cette école, écrit le message et l'envoie à chaque appareil des parents concernés.
+3. Chaque parent choisit dans l'app ce qu'il reçoit (catégories) et peut activer les heures calmes (21 h – 6 h, sauf communiqué urgent) : le Worker respecte ces préférences.
+4. **APK** : `google-services.json` en secret GitHub `GOOGLE_SERVICES_JSON` (base64). **Site des parents** : bouton « Activer » à l'accueil et dans « Mon compte » (sur iPhone, après ajout à l'écran d'accueil).
 
-Sont notifiés : absence ou retard, paiement reçu, note de conduite, nouveau devoir, nouveau communiqué.
+Mise en place du Worker (une fois) :
+
+```bash
+cd push && npm install
+npx wrangler login                                   # compte Cloudflare gratuit
+npx wrangler secret put SERVICE_ACCOUNT < cle.json   # clé JSON du compte de service parentecole-push
+npx wrangler deploy                                  # affiche l'adresse du Worker
+```
+
+Après une modification de `push/src/index.ts`, redéployer avec `npx wrangler deploy` (les tests `tests/push.test.ts` font tourner le Worker contre l'émulateur).
+
+Puis mettre cette adresse dans `VITE_PUSH_URL` (fichier `.env` et variable GitHub) et redéployer le site de l'école. L'offre gratuite limite chaque passage à une cinquantaine d'envois : un communiqué à toute une grande école part en quelques minutes.
 
 Sans push, l'app affiche ces mêmes nouveautés sous la cloche de l'accueil.
+
+## Import de documents avec Gemini
+
+Dans l'espace école, **Importer avec Gemini** lit un document (PDF, Word, Excel, CSV ou photo) et propose des **élèves**, des **classes avec leurs branches**, l'**horaire** d'une classe, ou une **interrogation** préparée à partir d'un cours. La direction vérifie et corrige chaque ligne ; rien n'est enregistré sans validation. Les professeurs ne peuvent préparer que des interrogations.
+
+- Le navigateur convertit Word (mammoth) et Excel (read-excel-file) en texte ; PDF et photos (allégées à 2000 px) partent tels quels.
+- Le Worker (`POST /ai/import`) vérifie le jeton Firebase du membre du personnel (second facteur compris), son rôle et son école, applique un plafond quotidien par école (`AI_DAILY_LIMIT`, 40 par défaut), puis interroge l'API Gemini avec un schéma JSON strict. Le document n'est pas conservé.
+- Mise en service : créez une clé sur https://aistudio.google.com/apikey, puis
+
+```bash
+cd push && npx wrangler secret put GEMINI_API_KEY   # coller la clé quand elle est demandée
+```
+
+  Modèle facultatif : variable `GEMINI_MODEL` (par défaut `gemini-flash-latest`). Pour des données d'élèves, préférez l'offre payante de l'API (sur l'offre gratuite, Google peut utiliser les contenus envoyés pour améliorer ses produits) et fixez un plafond de dépenses dans Google Cloud.
+
+## Design
+
+Version épurée : fond blanc, une seule police (Figtree), un seul vert d'accent, la couleur réservée aux états (absent, retard, paiement urgent), icônes Lucide. Illustrations : [unDraw](https://undraw.co) (licence libre, usage commercial autorisé), recolorées aux couleurs de ParentEcole.
 
 ## Commandes utiles
 
 | Commande | Effet |
 | --- | --- |
-| `npm test` | Tests de la logique (frais, codes, appel) |
-| `npm run test:rules` | Tests des règles de sécurité (émulateur Firestore) |
+| `npm test` | Tests de la logique (frais, codes, appel, notes et bulletins, jours fériés) |
+| `npm run test:rules` | Tests des règles de sécurité et du Worker de notifications (émulateur Firestore) |
 | `npm run typecheck` | Vérification des types |
 | `npm run build` | Compilation des deux applications |

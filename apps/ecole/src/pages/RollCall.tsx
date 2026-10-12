@@ -1,4 +1,4 @@
-import { formatLongCap, todayISO, type Attendance, type AttendanceStatus } from '@pe/shared';
+import { formatLongCap, noSchoolReason, todayISO, type Attendance, type AttendanceStatus, type SchoolEvent } from '@pe/shared';
 import { q, saveClassAttendance } from '@pe/shared/api';
 import { getFirebase } from '@pe/shared/firebase';
 import { useLiveQuery } from '@pe/shared/hooks';
@@ -14,12 +14,14 @@ type Mark = { status: Exclude<AttendanceStatus, 'present'>; reason?: string };
 export function RollCallPage() {
   const { db } = getFirebase();
   const access = useAccess();
-  const { schoolId, students, myClasses } = useSchool();
+  const { schoolId, students, myClasses, school } = useSchool();
   const [classId, setClassId] = useState(myClasses[0]?.id ?? '');
   const [date, setDate] = useState(todayISO());
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const { busy, run } = useAction();
   const existing = useLiveQuery<Attendance>(`att-day:${schoolId}:${date}`, () => q.schoolAttendanceOn(db, schoolId, date));
+  const events = useLiveQuery<SchoolEvent>(`ev:${schoolId}`, () => q.events(db, schoolId));
+  const noSchool = noSchoolReason(date, { events: events.data, saturdayClasses: school?.saturdayClasses });
   const classStudents = students.filter((s) => s.active && s.classId === classId);
   const recorded = existing.data.filter((a) => a.classId === classId);
 
@@ -66,6 +68,7 @@ export function RollCallPage() {
           marks,
           recordedBy: access.email,
           recordedByName: access.name,
+          previous: Object.fromEntries(existing.data.map((a) => [a.studentId, a.status])),
         }),
       `Appel enregistré : ${presents} présents, ${absents} absent${absents > 1 ? 's' : ''}, ${lates} retard${lates > 1 ? 's' : ''}.`,
     );
@@ -75,9 +78,9 @@ export function RollCallPage() {
     <div>
       <PageHeader title="Appel" description="Cochez seulement les absents et les retards : tous les autres élèves sont marqués présents. Les parents sont informés dans l'application." />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="flex flex-1 flex-col gap-1 text-sm font-bold">
+        <label className="flex flex-1 flex-col gap-1 text-sm font-semibold">
           Classe
-          <select value={classId} onChange={(e) => setClassId(e.target.value)} className="h-12 rounded-xl border border-[#c4ccc6] bg-surface px-3 text-[16px] font-normal">
+          <select value={classId} onChange={(e) => setClassId(e.target.value)} className="h-12 rounded-xl border border-field bg-surface px-3 text-[16px] font-normal">
             {myClasses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -85,12 +88,17 @@ export function RollCallPage() {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-bold sm:w-48">
+        <label className="flex flex-col gap-1 text-sm font-semibold sm:w-48">
           Date
-          <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="h-12 rounded-xl border border-[#c4ccc6] bg-surface px-3 font-normal" />
+          <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="h-12 rounded-xl border border-field bg-surface px-3 font-normal" />
         </label>
       </div>
 
+      {noSchool && (
+        <div className="mb-3 rounded-xl bg-warn-soft px-3.5 py-2.5 text-sm text-warn">
+          <strong>Jour sans cours : {noSchool}.</strong> Vérifiez la date avant d'enregistrer l'appel.
+        </div>
+      )}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold text-ink-2">{formatLongCap(date)}</span>
         {recorded.length > 0 ? <Badge tone="brand">Appel déjà enregistré, vous pouvez le corriger</Badge> : <Badge tone="neutral">Appel pas encore fait</Badge>}
@@ -117,14 +125,14 @@ export function RollCallPage() {
                         placeholder="Motif (facultatif)"
                         value={m.reason ?? ''}
                         onChange={(e) => setMarks((x) => ({ ...x, [s.id]: { ...m, reason: e.target.value } }))}
-                        className="h-10 rounded-lg border border-[#c4ccc6] bg-surface px-2.5 text-sm sm:w-48"
+                        className="h-10 rounded-lg border border-field bg-surface px-2.5 text-sm sm:w-48"
                       />
                     )}
                     <button
                       type="button"
                       aria-pressed={m?.status === 'absent'}
                       onClick={() => toggle(s.id, 'absent')}
-                      className={cx('min-h-10 rounded-lg border px-3 text-sm font-bold', m?.status === 'absent' ? 'border-danger bg-danger text-white' : 'border-line text-ink-2 hover:border-danger')}
+                      className={cx('min-h-10 rounded-lg border px-3 text-sm font-semibold', m?.status === 'absent' ? 'border-danger bg-danger text-white' : 'border-line text-ink-2 hover:border-danger')}
                     >
                       Absent
                     </button>
@@ -132,7 +140,7 @@ export function RollCallPage() {
                       type="button"
                       aria-pressed={m?.status === 'late'}
                       onClick={() => toggle(s.id, 'late')}
-                      className={cx('min-h-10 rounded-lg border px-3 text-sm font-bold', m?.status === 'late' ? 'border-chalk bg-chalk text-ink' : 'border-line text-ink-2 hover:border-chalk')}
+                      className={cx('min-h-10 rounded-lg border px-3 text-sm font-semibold', m?.status === 'late' ? 'border-warn bg-warn-soft text-warn' : 'border-line text-ink-2 hover:border-warn')}
                     >
                       Retard
                     </button>

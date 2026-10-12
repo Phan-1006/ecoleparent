@@ -2,6 +2,25 @@ import { Capacitor } from '@capacitor/core';
 
 export const isNative = Capacitor.isNativePlatform();
 
+/** Nom lisible de l'appareil, pour la liste « Appareils qui reçoivent les notifications ». */
+export function deviceLabel(): string {
+  const ua = navigator.userAgent;
+  const model = /Android [\d.]+; ([^;)]+)/.exec(ua)?.[1]?.replace(/ Build.*$/, '');
+  if (isNative) return model ? `Application · ${model}` : 'Application Android';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Navigateur';
+  const system = model ?? /(Windows|Mac OS X|Linux|iPhone|iPad)/.exec(ua)?.[1] ?? 'ordinateur';
+  return `${browser} · ${system}`;
+}
+
+/** Jeton de notification de cet appareil (pour le reconnaître dans la liste des appareils). */
+export function rememberPushToken(token: string) {
+  try {
+    localStorage.setItem('pe.pushToken', token);
+  } catch {
+    /* sans conséquence */
+  }
+}
+
 /** Partage un texte (reçu, code élève) : feuille de partage Android, sinon Web Share, sinon presse-papiers. */
 export async function shareText(title: string, text: string): Promise<'shared' | 'copied'> {
   if (isNative) {
@@ -39,10 +58,6 @@ export function onBackButton(handler: () => boolean): () => void {
   };
 }
 
-export async function setupStatusBar() {
-  await setStatusBarOnDark(false);
-}
-
 /** Icônes de la barre d'état claires (sur fond vert) ou foncées (sur fond clair). */
 export async function setStatusBarOnDark(dark: boolean) {
   if (!isNative) return;
@@ -68,7 +83,9 @@ export async function nativeGoogleIdToken(): Promise<string | null> {
   socialReady ??= SocialLogin.initialize({ google: { webClientId: GOOGLE_WEB_CLIENT_ID, mode: 'online' } });
   await socialReady;
   try {
-    const res = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+    // Pas de `scopes` : e-mail, profil et openid sont inclus d'office, et en passer exige de
+    // modifier l'activité Android principale (« You CANNOT use scopes without modifying… »).
+    const res = await SocialLogin.login({ provider: 'google', options: {} });
     const result = res.result as { idToken?: string | null };
     if (!result.idToken) throw new Error('Google n’a pas renvoyé de jeton. Réessayez.');
     return result.idToken;
@@ -88,13 +105,24 @@ export async function nativeGoogleSignOut() {
 /**
  * Notifications push (Firebase Cloud Messaging). Désactivées tant que
  * VITE_PUSH_ENABLED n'est pas « true » : elles exigent google-services.json dans l'APK.
+ * `onOpen` est appelé quand la personne touche une notification.
  */
-export async function setupPush(onToken: (token: string) => void): Promise<void> {
+export async function setupPush(onToken: (token: string) => void, onOpen?: () => void): Promise<void> {
   if (!isNative || import.meta.env.VITE_PUSH_ENABLED !== 'true') return;
   const { PushNotifications } = await import('@capacitor/push-notifications');
+  // Canal « Messages de l'école » (Android 8 et plus) : le Worker d'envoi l'indique dans chaque message.
+  await PushNotifications.createChannel({
+    id: 'ecole',
+    name: "Messages de l'école",
+    description: 'Absences, paiements, conduite, devoirs et communiqués',
+    importance: 4,
+    visibility: 1,
+    vibration: true,
+  }).catch(() => undefined);
   let perm = await PushNotifications.checkPermissions();
   if (perm.receive === 'prompt') perm = await PushNotifications.requestPermissions();
   if (perm.receive !== 'granted') return;
   await PushNotifications.addListener('registration', (t) => onToken(t.value));
+  if (onOpen) await PushNotifications.addListener('pushNotificationActionPerformed', () => onOpen());
   await PushNotifications.register();
 }

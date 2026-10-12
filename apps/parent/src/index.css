@@ -3,32 +3,121 @@
 @source '../../../packages/shared/src';
 
 html,
-body,
+body {
+  height: 100%;
+}
+/* Hauteur visible réelle sur mobile (barre d'adresse du navigateur comprise). */
 #root {
   height: 100%;
+  height: 100dvh;
 }
 
 body {
   overscroll-behavior: none;
 }
 
-/* Zones protégées (encoche, barre de gestes) sur Android en plein écran. */
-.safe-top {
-  padding-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+/*
+ * Zones protégées (encoche, barre de gestes) sur Android en plein écran : elles s'AJOUTENT
+ * à la marge voulue (pt-safe-5 = marge de 5 + encoche). Sur le web elles valent 0.
+ */
+:root {
+  --inset-top: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+  --inset-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
 }
-.safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
+@utility pt-safe-* {
+  padding-top: calc(--spacing(--value(integer)) + var(--inset-top));
+}
+@utility pb-safe-* {
+  padding-bottom: calc(--spacing(--value(integer)) + var(--inset-bottom));
 }
 
-/* Navigateur d'ordinateur : l'app reste une colonne de téléphone, centrée. */
-@media (min-width: 640px) {
-  body {
-    background: #dfe4dc;
+
+/* ── Taille du texte (Paramètres › Apparence) ────────────────────────────────
+ * Le zoom agrandit tout l'écran d'un coup ; la hauteur est divisée d'autant pour que la
+ * barre du bas reste en bas (vérifié avec Chromium, moteur de la WebView Android). */
+#root {
+  zoom: var(--fs, 1);
+  height: calc(100dvh / var(--fs, 1));
+}
+
+/* ── Briques visuelles (version épurée) ───────────────────────────────────────
+ * Cartes à filet fin, sans ombre ; bloc de synthèse sur fond discret ; avatars neutres. */
+.pe-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 14px;
+}
+.pe-summary {
+  background: var(--color-ground);
+  border-radius: 16px;
+}
+.tone-a,
+.tone-b,
+.tone-g,
+.tone-t,
+.tone-v {
+  background: var(--color-muted);
+  color: var(--color-ink-2);
+}
+.tone-c {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-ink);
+}
+
+/* ── Thème sombre (Paramètres › Apparence) ────────────────────────────────────
+ * Mêmes rôles qu'en clair : fond, surfaces, filets, trois niveaux de texte, un vert d'accent. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-ground: #161b18;
+  --color-surface: #0f1311;
+  --color-muted: #1d231f;
+  --color-line: #262d29;
+  --color-line-soft: #212824;
+  --color-ink: #eceeec;
+  --color-ink-2: #bac2bc;
+  --color-ink-3: #8d978f;
+  --color-ink-4: #737d76;
+  --color-brand: #2c6e50;
+  --color-brand-2: #3a7d5e;
+  --color-brand-3: #24573f;
+  --color-brand-soft: #18261f;
+  --color-brand-ink: #c9dcd1;
+  --color-ok: #5bc48b;
+  --color-ok-soft: #14271d;
+  --color-danger: #c4502c;
+  --color-danger-ink: #f0907a;
+  --color-danger-text: #f3c9b9;
+  --color-danger-soft: #2b1712;
+  --color-danger-line: #5a2e22;
+  --color-warn: #e9b155;
+  --color-warn-soft: #2a2213;
+  --color-info: #8fb0f0;
+  --color-info-soft: #18223a;
+  --color-field: #343c37;
+}
+/* En sombre, le vert sert de fond (texte blanc) : en texte ou en bordure, on l'éclaircit. */
+:root[data-theme='dark'] .text-brand { color: #86cba6; }
+:root[data-theme='dark'] .border-brand { border-color: #4f9a76; }
+:root[data-theme='dark'] .text-danger { color: #f0907a; }
+
+/* Impression (site des parents) : seule la zone .print-area (bulletin, reçu) sort sur papier, en clair. */
+@media print {
+  :root {
+    --fs: 1;
   }
   #root {
-    max-width: 480px;
-    margin: 0 auto;
-    background: var(--color-ground);
-    box-shadow: 0 0 0 1px #d2d8cf, 0 24px 60px -20px rgb(22 35 28 / 0.35);
+    height: auto;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
   }
 }
